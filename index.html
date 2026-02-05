@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GperView — Log Reader</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside id="sidebar" class="sidebar">
+        <header class="hero">
+          <div class="hero-text">
+            <h1>GperView</h1>
+            <p>Читалка логів з фільтрацією у стилі grep.</p>
+          </div>
+          <div class="hero-meta">
+            <span class="chip">Drag & Drop</span>
+            <span class="chip">Regex</span>
+            <span class="chip">Pagination</span>
+          </div>
+        </header>
+
+        <section class="panel">
+          <div id="dropzone" class="dropzone" aria-label="Drop file">
+            <div class="dropzone-inner">
+              <div class="drop-title">Перетягни файл сюди</div>
+              <div class="drop-sub">або</div>
+              <label class="btn" for="fileInput">Обрати файл</label>
+              <input id="fileInput" type="file" accept=".log,.txt,.out" />
+              <div class="drop-hint">Підтримується текстовий формат</div>
+            </div>
+          </div>
+
+          <div class="controls">
+          <div class="control-row">
+            <div class="control">
+              <label for="pageSize">Page size</label>
+              <input id="pageSize" type="number" min="100" step="100" value="2000" />
+            </div>
+            <div class="control">
+              <label for="jumpTo">Jump to page</label>
+              <input id="jumpTo" type="number" min="1" placeholder="1" />
+            </div>
+          </div>
+            <div id="status" class="status">Файл не завантажено</div>
+          </div>
+        </section>
+        <footer class="footer">
+          Фільтрація застосовується до всього файлу, а потім формується пагінація.
+        </footer>
+      </aside>
+
+      <main class="main">
+        <button id="toggleSidebar" class="sidebar-toggle" type="button" aria-label="Toggle panel">
+          <span class="sidebar-toggle-icon">&lt;</span>
+        </button>
+        <section class="panel filters-panel">
+          <div class="filters">
+            <div class="filters-head">
+              <div class="control">
+                <label>Rules</label>
+                <div class="rules-sub">Combine include rules with per-rule AND/OR</div>
+              </div>
+              <button id="addRuleBtn" class="btn" type="button">Add rule</button>
+            </div>
+
+            <div id="rulesList" class="rules-list">
+              <div class="rule" data-rule>
+                <select class="rule-join">
+                  <option value="and">AND</option>
+                  <option value="or">OR</option>
+                </select>
+                <select class="rule-type">
+                  <option value="include">Include (contains)</option>
+                  <option value="exclude">Exclude (not contains)</option>
+                  <option value="starts">Starts with</option>
+                  <option value="ends">Ends with</option>
+                  <option value="regex">Regex</option>
+                </select>
+                <input class="rule-value" type="text" placeholder="value..." />
+                <label class="rule-case">
+                  <input class="rule-case-toggle" type="checkbox" />
+                  <span>Case sensitive</span>
+                </label>
+                <button class="btn ghost rule-remove" type="button">Remove</button>
+              </div>
+            </div>
+            <div class="rules-hint">Max 8 rules. Empty rules are ignored. Exclude rules are always enforced.</div>
+          </div>
+
+          <div class="control-row"></div>
+        </section>
+        <section class="panel viewer">
+          <div class="viewer-header">
+            <div class="stats">
+              <div><strong>Lines:</strong> <span id="totalLines">0</span></div>
+              <div><strong>Filtered:</strong> <span id="filteredLines">0</span></div>
+              <div><strong>Page:</strong> <span id="pageInfo">0 / 0</span></div>
+            </div>
+            <div class="viewer-actions">
+              <button id="copyBtn" class="btn ghost copy-btn" type="button">Copy view</button>
+              <div class="pager">
+                <button id="prevBtn" class="btn" type="button">Prev</button>
+                <button id="nextBtn" class="btn" type="button">Next</button>
+              </div>
+            </div>
+          </div>
+          <div id="output" class="output" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
