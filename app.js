@@ -2,10 +2,8 @@ const fileInput = document.getElementById('fileInput');
 const dropzone = document.getElementById('dropzone');
 const rulesList = document.getElementById('rulesList');
 const addRuleBtn = document.getElementById('addRuleBtn');
-const paginationToggle = document.getElementById('paginationToggle');
 const pageSizeInput = document.getElementById('pageSize');
 const jumpToInput = document.getElementById('jumpTo');
-const applyBtn = document.getElementById('applyBtn');
 const statusEl = document.getElementById('status');
 const outputEl = document.getElementById('output');
 const totalLinesEl = document.getElementById('totalLines');
@@ -13,11 +11,28 @@ const filteredLinesEl = document.getElementById('filteredLines');
 const pageInfoEl = document.getElementById('pageInfo');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
+const toggleSidebarBtn = document.getElementById('toggleSidebar');
+const sidebarEl = document.getElementById('sidebar');
+const copyBtn = document.getElementById('copyBtn');
 
 let allLines = [];
 let filtered = [];
 let currentPage = 1;
+let isSidebarCollapsed = false;
 const MAX_RULES = 8;
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const applyFiltersDebounced = debounce(() => {
+  if (allLines.length > 0) {
+    applyFilters();
+  }
+}, 400);
 
 function escapeHtml(text) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -115,6 +130,27 @@ function highlightLine(line, includeRegex) {
   return result;
 }
 
+function decorateLine(html) {
+  let output = html;
+  output = output.replace(
+    /(\b\d{4}-\d{2}-\d{2}\b)/g,
+    '<span class="hl-date">$1</span>'
+  );
+  output = output.replace(
+    /(\b\d{2}:\d{2}:\d{2}(?:[.,]\d{3})?\b)/g,
+    '<span class="hl-time">$1</span>'
+  );
+  output = output.replace(/\b(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)\b/g, (full, level) => {
+    return `<span class="hl-level level-${level.toLowerCase()}">${level}</span>`;
+  });
+  return output;
+}
+
+function getUppercaseLevel(line) {
+  const match = line.match(/\b(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)\b/);
+  return match ? match[1] : null;
+}
+
 function applyFilters() {
   statusEl.classList.remove('error');
   const rules = getRules();
@@ -173,7 +209,7 @@ function applyFilters() {
 }
 
 function getPagination() {
-  if (!paginationToggle.checked) {
+  if (allLines.length <= 2000) {
     return { pageSize: filtered.length || 1, totalPages: 1 };
   }
   const raw = Number(pageSizeInput.value);
@@ -192,17 +228,18 @@ function renderPage(includeRegex) {
   const { pageSize, totalPages } = getPagination();
   currentPage = Math.min(Math.max(currentPage, 1), totalPages);
   const start = (currentPage - 1) * pageSize;
-  const end = paginationToggle.checked ? start + pageSize : filtered.length;
+  const end = allLines.length > 2000 ? start + pageSize : filtered.length;
   const pageLines = filtered.slice(start, end);
 
   const html = pageLines
-    .map(
-      (item) =>
-        `<div class="line"><span class="line-number">${item.index}</span><span class="line-text">${highlightLine(
-          item.text,
-          includeRegex
-        )}</span></div>`
-    )
+    .map((item, idx) => {
+      const displayIndex = start + idx + 1;
+      const highlighted = highlightLine(item.text, includeRegex);
+      const decorated = decorateLine(highlighted);
+      const level = getUppercaseLevel(item.text);
+      const glowClass = level ? ` level-${level.toLowerCase()}-glow` : '';
+      return `<div class="line${glowClass}"><span class="line-number file">${item.index}</span><span class="line-number display">${displayIndex}</span><span class="line-text">${decorated}</span></div>`;
+    })
     .join('');
 
   outputEl.innerHTML = html || '<div class="empty">Немає збігів</div>';
@@ -248,10 +285,6 @@ fileInput.addEventListener('change', (event) => {
 dropzone.addEventListener('drop', (event) => {
   const file = event.dataTransfer?.files?.[0];
   handleFile(file);
-});
-
-applyBtn.addEventListener('click', () => {
-  applyFilters();
 });
 
 jumpToInput.addEventListener('change', () => {
@@ -317,9 +350,19 @@ function removeRuleRow(row) {
 }
 
 function attachRuleHandlers(row) {
-  row.querySelectorAll('input, select').forEach((el) => {
+  row.querySelectorAll('select').forEach((el) => {
     el.addEventListener('change', () => {
       if (allLines.length > 0) applyFilters();
+    });
+  });
+  row.querySelectorAll('.rule-case-toggle').forEach((el) => {
+    el.addEventListener('change', () => {
+      if (allLines.length > 0) applyFilters();
+    });
+  });
+  row.querySelectorAll('.rule-value').forEach((el) => {
+    el.addEventListener('input', () => {
+      applyFiltersDebounced();
     });
   });
   row.querySelector('.rule-remove')?.addEventListener('click', () => removeRuleRow(row));
@@ -328,12 +371,16 @@ function attachRuleHandlers(row) {
 rulesList.querySelectorAll('[data-rule]').forEach((row) => attachRuleHandlers(row));
 addRuleBtn.addEventListener('click', addRuleRow);
 
-[paginationToggle, pageSizeInput].forEach((el) => {
+[pageSizeInput].forEach((el) => {
   el.addEventListener('change', () => {
     if (allLines.length > 0) {
       applyFilters();
     }
   });
+});
+
+pageSizeInput.addEventListener('input', () => {
+  applyFiltersDebounced();
 });
 
 function updateJoinSelectors() {
@@ -350,3 +397,24 @@ function updateJoinSelectors() {
 }
 
 updateJoinSelectors();
+
+toggleSidebarBtn.addEventListener('click', () => {
+  isSidebarCollapsed = !isSidebarCollapsed;
+  sidebarEl.classList.toggle('collapsed', isSidebarCollapsed);
+  document.body.querySelector('.app')?.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
+  toggleSidebarBtn.querySelector('.sidebar-toggle-icon').textContent = isSidebarCollapsed ? '>' : '<';
+});
+
+copyBtn.addEventListener('click', async () => {
+  const { pageSize, totalPages } = getPagination();
+  const start = (currentPage - 1) * pageSize;
+  const end = allLines.length > 2000 ? start + pageSize : filtered.length;
+  const pageLines = filtered.slice(start, end).map((item) => item.text).join('\n');
+  try {
+    await navigator.clipboard.writeText(pageLines);
+    statusEl.textContent = 'Скопійовано у буфер обміну';
+  } catch (err) {
+    statusEl.textContent = 'Не вдалося скопіювати';
+    statusEl.classList.add('error');
+  }
+});
