@@ -4,6 +4,7 @@ const rulesList = document.getElementById('rulesList');
 const addRuleBtn = document.getElementById('addRuleBtn');
 const pageSizeInput = document.getElementById('pageSize');
 const jumpToInput = document.getElementById('jumpTo');
+const stackToggle = document.getElementById('stackToggle');
 const statusEl = document.getElementById('status');
 const outputEl = document.getElementById('output');
 const totalLinesEl = document.getElementById('totalLines');
@@ -20,6 +21,7 @@ let filtered = [];
 let currentPage = 1;
 let isSidebarCollapsed = false;
 const MAX_RULES = 8;
+const expandedStacks = new Set();
 function debounce(fn, delay) {
   let timer;
   return (...args) => {
@@ -77,7 +79,7 @@ function buildRuleTest(rule) {
 
   const re = new RegExp(escaped, testFlags);
   if (rule.type === 'exclude') {
-    return (line) => !re.test(line);
+    return (line) => re.test(line);
   }
   return (line) => re.test(line);
 }
@@ -133,7 +135,7 @@ function highlightLine(line, includeRegex) {
 function decorateLine(html) {
   let output = html;
   output = output.replace(
-    /(\b\d{4}-\d{2}-\d{2}\b)/g,
+    /(\b\d{4}-\d{2}-\d{2}\b|\b\d{2}-[A-Za-z]{3}-\d{4}\b)/g,
     '<span class="hl-date">$1</span>'
   );
   output = output.replace(
@@ -151,6 +153,68 @@ function getUppercaseLevel(line) {
   return match ? match[1] : null;
 }
 
+const DATE_PATTERNS = [
+  /^\s*\d{4}-\d{2}-\d{2}\b/, // 2025-02-01
+  /^\s*\d{2}-[A-Za-z]{3}-\d{4}\b/, // 01-Feb-2025
+];
+
+function isHeaderLine(line) {
+  return DATE_PATTERNS.some((re) => re.test(line));
+}
+
+function extractLevelAfterDate(line) {
+  const dateMatch = DATE_PATTERNS.map((re) => line.match(re)).find(Boolean);
+  if (!dateMatch) return null;
+  const start = (dateMatch.index ?? 0) + dateMatch[0].length;
+  const rest = line.slice(start);
+  const levelMatch = rest.match(/\b(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)\b/);
+  return levelMatch ? levelMatch[1] : null;
+}
+
+function buildEntries(lines) {
+  const entries = [];
+  let current = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const hasDate = isHeaderLine(line);
+    if (hasDate) {
+      const level = extractLevelAfterDate(line);
+      current = {
+        headerIndex: i + 1,
+        headerText: line,
+        level: level ? level.toLowerCase() : null,
+        levelUpper: level,
+        lines: [],
+        stackCount: 0,
+      };
+      entries.push(current);
+    }
+
+    if (!current) {
+      current = {
+        headerIndex: i + 1,
+        headerText: line,
+        level: null,
+        levelUpper: null,
+        lines: [],
+      };
+      entries.push(current);
+    }
+
+    current.lines.push({
+      index: i + 1,
+      text: line,
+      isStack: !hasDate && current && current.lines.length > 0,
+      level: current.level,
+      levelUpper: current.levelUpper,
+    });
+    if (!hasDate && current.lines.length > 1) {
+      current.stackCount += 1;
+    }
+  }
+  return entries;
+}
+
 function applyFilters() {
   statusEl.classList.remove('error');
   const rules = getRules();
@@ -164,10 +228,13 @@ function applyFilters() {
   const highlightRegex = buildHighlightRegex(rules);
 
   filtered = [];
-  for (let i = 0; i < allLines.length; i += 1) {
-    const line = allLines[i];
+  const entries = buildEntries(allLines);
+  for (const entry of entries) {
+    const headerLine = entry.headerText;
+    const entryLines = entry.lines.map((item) => item.text);
+    const entryMatchTarget = (line) => line;
     if (!ruleTests.length) {
-      filtered.push({ index: i + 1, text: line });
+      filtered.push(...entry.lines);
       continue;
     }
     const includeRules = ruleTests.filter(({ rule }) => rule.type !== 'exclude');
@@ -177,7 +244,7 @@ function applyFilters() {
     if (includeRules.length) {
       includeMatch = null;
       for (const { rule, test } of includeRules) {
-        const passed = test(line);
+        const passed = entryLines.some((line) => test(entryMatchTarget(line)));
         if (includeMatch === null) {
           includeMatch = passed;
         } else if (rule.join === 'or') {
@@ -190,14 +257,22 @@ function applyFilters() {
 
     let excludeMatch = true;
     for (const { test } of excludeRules) {
-      if (!test(line)) {
+      const anyExclude = entryLines.some((line) => test(entryMatchTarget(line)));
+      if (anyExclude) {
         excludeMatch = false;
         break;
       }
     }
 
     if (includeMatch && excludeMatch) {
-      filtered.push({ index: i + 1, text: line });
+      filtered.push(
+        ...entry.lines.map((line) => ({
+          ...line,
+          entryId: entry.headerIndex,
+          hasStack: entry.lines.length > 1,
+          stackCount: entry.stackCount,
+        }))
+      );
     }
   }
 
@@ -231,18 +306,32 @@ function renderPage(includeRegex) {
   const end = allLines.length > 2000 ? start + pageSize : filtered.length;
   const pageLines = filtered.slice(start, end);
 
-  const html = pageLines
-    .map((item, idx) => {
-      const displayIndex = start + idx + 1;
+  let outputIndex = 0;
+  const rendered = pageLines
+    .map((item) => {
+      if (item.isStack && !stackToggle.checked && !expandedStacks.has(item.entryId)) {
+        return null;
+      }
+      outputIndex += 1;
+      const displayIndex = start + outputIndex;
       const highlighted = highlightLine(item.text, includeRegex);
       const decorated = decorateLine(highlighted);
-      const level = getUppercaseLevel(item.text);
-      const glowClass = level ? ` level-${level.toLowerCase()}-glow` : '';
-      return `<div class="line${glowClass}"><span class="line-number file">${item.index}</span><span class="line-number display">${displayIndex}</span><span class="line-text">${decorated}</span></div>`;
+      const levelClass = item.level ? ` level-${item.level}` : '';
+      const glowClass = item.levelUpper ? ` level-${item.level}-glow` : '';
+      const stackClass = item.isStack ? ' stack' : '';
+      const summary =
+        !item.isStack &&
+        item.hasStack &&
+        !stackToggle.checked &&
+        !expandedStacks.has(item.entryId)
+          ? `<div class="line stack-summary"><span class="line-number file"></span><span class="line-number display"></span><span class="line-text"><button class="stack-expand" type="button" data-stack-open="${item.entryId}">… stacktrace (${item.stackCount} lines) — click to expand</button></span></div>`
+          : '';
+      return `<div class="line${levelClass}${glowClass}${stackClass}" data-entry="${item.entryId}"><span class="line-number file">${item.index}</span><span class="line-number display">${displayIndex}</span><span class="line-text">${decorated}</span></div>${summary}`;
     })
+    .filter(Boolean)
     .join('');
 
-  outputEl.innerHTML = html || '<div class="empty">Немає збігів</div>';
+  outputEl.innerHTML = rendered || '<div class="empty">Немає збігів</div>';
   pageInfoEl.textContent = `${currentPage} / ${totalPages}`;
 }
 
@@ -377,6 +466,22 @@ addRuleBtn.addEventListener('click', addRuleRow);
       applyFilters();
     }
   });
+});
+
+stackToggle.addEventListener('change', () => {
+  expandedStacks.clear();
+  if (allLines.length > 0) {
+    applyFilters();
+  }
+});
+
+outputEl.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const entryId = target.getAttribute('data-stack-open');
+  if (!entryId) return;
+  expandedStacks.add(Number(entryId));
+  applyFilters();
 });
 
 pageSizeInput.addEventListener('input', () => {

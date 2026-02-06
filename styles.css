@@ -405,16 +405,82 @@ body {
   padding: 0 2px;
 }
 
+.line-text {
+  white-space: pre-wrap;
+}
+
+.line.stack .line-text {
+  padding-left: 14px;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  opacity: 0.9;
+}
+
+.stack-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stack-summary {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.stack-summary .stack-expand {
+  background: transparent;
+  border: none;
+  color: var(--accent-2);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.line.level-info .line-text {
+  color: rgba(90, 209, 255, 0.72);
+}
+
+.line.level-warn .line-text,
+.line.level-warning .line-text {
+  color: rgba(255, 209, 102, 0.72);
+}
+
+.line.level-error .line-text {
+  color: rgba(255, 122, 140, 0.74);
+}
+
+.line.level-debug .line-text {
+  color: rgba(155, 140, 255, 0.72);
+}
+
+.line.level-trace .line-text {
+  color: rgba(106, 228, 176, 0.7);
+}
+
+.line.level-fatal .line-text {
+  color: rgba(255, 95, 115, 0.78);
+}
+
 .hl-date {
-  color: #ffd166;
+  color: inherit;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
 .hl-time {
-  color: #6ae4b0;
+  color: inherit;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .hl-level {
-  font-weight: 600;
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .level-info {
@@ -443,28 +509,28 @@ body {
 }
 
 .line.level-info-glow {
-  box-shadow: 0 0 12px rgba(90, 209, 255, 0.25);
+  box-shadow: 0 0 10px rgba(90, 209, 255, 0.18);
 }
 
 .line.level-warn-glow,
 .line.level-warning-glow {
-  box-shadow: 0 0 12px rgba(255, 209, 102, 0.25);
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.18);
 }
 
 .line.level-error-glow {
-  box-shadow: 0 0 12px rgba(255, 122, 140, 0.28);
+  box-shadow: 0 0 10px rgba(255, 122, 140, 0.2);
 }
 
 .line.level-debug-glow {
-  box-shadow: 0 0 12px rgba(155, 140, 255, 0.25);
+  box-shadow: 0 0 10px rgba(155, 140, 255, 0.18);
 }
 
 .line.level-trace-glow {
-  box-shadow: 0 0 12px rgba(106, 228, 176, 0.22);
+  box-shadow: 0 0 10px rgba(106, 228, 176, 0.16);
 }
 
 .line.level-fatal-glow {
-  box-shadow: 0 0 12px rgba(255, 95, 115, 0.3);
+  box-shadow: 0 0 10px rgba(255, 95, 115, 0.2);
 }
 
 .copy-btn {
