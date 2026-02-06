@@ -405,16 +405,57 @@ body {
   padding: 0 2px;
 }
 
-.hl-date {
+.line-text {
+  white-space: pre-wrap;
+}
+
+.line.stack .line-text {
+  padding-left: 14px;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  opacity: 0.9;
+}
+
+.line.level-info .line-text {
+  color: #5ad1ff;
+}
+
+.line.level-warn .line-text,
+.line.level-warning .line-text {
   color: #ffd166;
 }
 
-.hl-time {
+.line.level-error .line-text {
+  color: #ff7a8c;
+}
+
+.line.level-debug .line-text {
+  color: #9b8cff;
+}
+
+.line.level-trace .line-text {
   color: #6ae4b0;
 }
 
-.hl-level {
+.line.level-fatal .line-text {
+  color: #ff5f73;
+}
+
+.hl-date {
+  color: inherit;
   font-weight: 600;
+  opacity: 0.9;
+}
+
+.hl-time {
+  color: inherit;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.hl-level {
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .level-info {
