@@ -4,6 +4,7 @@ const rulesList = document.getElementById('rulesList');
 const addRuleBtn = document.getElementById('addRuleBtn');
 const pageSizeInput = document.getElementById('pageSize');
 const jumpToInput = document.getElementById('jumpTo');
+const stackToggle = document.getElementById('stackToggle');
 const statusEl = document.getElementById('status');
 const outputEl = document.getElementById('output');
 const totalLinesEl = document.getElementById('totalLines');
@@ -20,6 +21,7 @@ let filtered = [];
 let currentPage = 1;
 let isSidebarCollapsed = false;
 const MAX_RULES = 8;
+const expandedStacks = new Set();
 function debounce(fn, delay) {
   let timer;
   return (...args) => {
@@ -183,6 +185,7 @@ function buildEntries(lines) {
         level: level ? level.toLowerCase() : null,
         levelUpper: level,
         lines: [],
+        stackCount: 0,
       };
       entries.push(current);
     }
@@ -205,6 +208,9 @@ function buildEntries(lines) {
       level: current.level,
       levelUpper: current.levelUpper,
     });
+    if (!hasDate && current.lines.length > 1) {
+      current.stackCount += 1;
+    }
   }
   return entries;
 }
@@ -259,7 +265,14 @@ function applyFilters() {
     }
 
     if (includeMatch && excludeMatch) {
-      filtered.push(...entry.lines);
+      filtered.push(
+        ...entry.lines.map((line) => ({
+          ...line,
+          entryId: entry.headerIndex,
+          hasStack: entry.lines.length > 1,
+          stackCount: entry.stackCount,
+        }))
+      );
     }
   }
 
@@ -293,19 +306,32 @@ function renderPage(includeRegex) {
   const end = allLines.length > 2000 ? start + pageSize : filtered.length;
   const pageLines = filtered.slice(start, end);
 
-  const html = pageLines
-    .map((item, idx) => {
-      const displayIndex = start + idx + 1;
+  let outputIndex = 0;
+  const rendered = pageLines
+    .map((item) => {
+      if (item.isStack && !stackToggle.checked && !expandedStacks.has(item.entryId)) {
+        return null;
+      }
+      outputIndex += 1;
+      const displayIndex = start + outputIndex;
       const highlighted = highlightLine(item.text, includeRegex);
       const decorated = decorateLine(highlighted);
       const levelClass = item.level ? ` level-${item.level}` : '';
       const glowClass = item.levelUpper ? ` level-${item.level}-glow` : '';
       const stackClass = item.isStack ? ' stack' : '';
-      return `<div class="line${levelClass}${glowClass}${stackClass}"><span class="line-number file">${item.index}</span><span class="line-number display">${displayIndex}</span><span class="line-text">${decorated}</span></div>`;
+      const summary =
+        !item.isStack &&
+        item.hasStack &&
+        !stackToggle.checked &&
+        !expandedStacks.has(item.entryId)
+          ? `<div class="line stack-summary"><span class="line-number file"></span><span class="line-number display"></span><span class="line-text"><button class="stack-expand" type="button" data-stack-open="${item.entryId}">… stacktrace (${item.stackCount} lines) — click to expand</button></span></div>`
+          : '';
+      return `<div class="line${levelClass}${glowClass}${stackClass}" data-entry="${item.entryId}"><span class="line-number file">${item.index}</span><span class="line-number display">${displayIndex}</span><span class="line-text">${decorated}</span></div>${summary}`;
     })
+    .filter(Boolean)
     .join('');
 
-  outputEl.innerHTML = html || '<div class="empty">Немає збігів</div>';
+  outputEl.innerHTML = rendered || '<div class="empty">Немає збігів</div>';
   pageInfoEl.textContent = `${currentPage} / ${totalPages}`;
 }
 
@@ -440,6 +466,22 @@ addRuleBtn.addEventListener('click', addRuleRow);
       applyFilters();
     }
   });
+});
+
+stackToggle.addEventListener('change', () => {
+  expandedStacks.clear();
+  if (allLines.length > 0) {
+    applyFilters();
+  }
+});
+
+outputEl.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const entryId = target.getAttribute('data-stack-open');
+  if (!entryId) return;
+  expandedStacks.add(Number(entryId));
+  applyFilters();
 });
 
 pageSizeInput.addEventListener('input', () => {

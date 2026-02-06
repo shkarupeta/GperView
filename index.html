@@ -43,9 +43,15 @@
               <input id="jumpTo" type="number" min="1" placeholder="1" />
             </div>
           </div>
-            <div id="status" class="status">Файл не завантажено</div>
+          <div class="stack-toggle-row">
+            <label class="toggle">
+              <input id="stackToggle" type="checkbox" checked />
+              <span>Show stacktraces</span>
+            </label>
           </div>
-        </section>
+          <div id="status" class="status">Файл не завантажено</div>
+        </div>
+      </section>
         <footer class="footer">
           Фільтрація застосовується до всього файлу, а потім формується пагінація.
         </footer>

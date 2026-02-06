@@ -415,29 +415,54 @@ body {
   opacity: 0.9;
 }
 
+.stack-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stack-summary {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.stack-summary .stack-expand {
+  background: transparent;
+  border: none;
+  color: var(--accent-2);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  width: 100%;
+}
+
 .line.level-info .line-text {
-  color: #5ad1ff;
+  color: rgba(90, 209, 255, 0.72);
 }
 
 .line.level-warn .line-text,
 .line.level-warning .line-text {
-  color: #ffd166;
+  color: rgba(255, 209, 102, 0.72);
 }
 
 .line.level-error .line-text {
-  color: #ff7a8c;
+  color: rgba(255, 122, 140, 0.74);
 }
 
 .line.level-debug .line-text {
-  color: #9b8cff;
+  color: rgba(155, 140, 255, 0.72);
 }
 
 .line.level-trace .line-text {
-  color: #6ae4b0;
+  color: rgba(106, 228, 176, 0.7);
 }
 
 .line.level-fatal .line-text {
-  color: #ff5f73;
+  color: rgba(255, 95, 115, 0.78);
 }
 
 .hl-date {
@@ -484,28 +509,28 @@ body {
 }
 
 .line.level-info-glow {
-  box-shadow: 0 0 12px rgba(90, 209, 255, 0.25);
+  box-shadow: 0 0 10px rgba(90, 209, 255, 0.18);
 }
 
 .line.level-warn-glow,
 .line.level-warning-glow {
-  box-shadow: 0 0 12px rgba(255, 209, 102, 0.25);
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.18);
 }
 
 .line.level-error-glow {
-  box-shadow: 0 0 12px rgba(255, 122, 140, 0.28);
+  box-shadow: 0 0 10px rgba(255, 122, 140, 0.2);
 }
 
 .line.level-debug-glow {
-  box-shadow: 0 0 12px rgba(155, 140, 255, 0.25);
+  box-shadow: 0 0 10px rgba(155, 140, 255, 0.18);
 }
 
 .line.level-trace-glow {
-  box-shadow: 0 0 12px rgba(106, 228, 176, 0.22);
+  box-shadow: 0 0 10px rgba(106, 228, 176, 0.16);
 }
 
 .line.level-fatal-glow {
-  box-shadow: 0 0 12px rgba(255, 95, 115, 0.3);
+  box-shadow: 0 0 10px rgba(255, 95, 115, 0.2);
 }
 
 .copy-btn {
